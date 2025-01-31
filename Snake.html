@@ -1,0 +1,355 @@
+<!--
+    Snake Game using HTML, CSS, jQuery, and JavaScript
+    Author: [Your Name]
+    Description: A simple Snake game implemented using a table-based grid system.
+    Features: 
+    - Move the snake with arrow keys
+    - Eat food to grow the snake and increase the score
+    - Special large food appears after eating 5 normal food items
+    - Speed increases as score reaches a threshold
+    - Game over alert with score display
+-->
+<html>
+<head>
+    <title>Snake Game</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+		/* General body styling */
+		body {
+			text-align: center;
+			background-color: #e3f2fd;
+			font-family: 'Arial', sans-serif;
+		}
+
+		/* Container */
+		.container {
+			margin-top: 10px;
+		}
+
+		/* Game Box Centering */
+		.game-box {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			
+		}
+
+		/* Game Grid */
+		#gameBox {
+			border: 4px solid #343a40;
+			background-color: #f8f9fa;
+			box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+			display: inline-block;
+			border-radius: 10px;
+			padding: 5px;
+		}
+
+		td {
+			width: 25px;
+			height: 25px;
+			text-align: center;
+			border: 1px solid #ced4da;
+		}
+
+		/* Snake Styling */
+		.snake {
+			background: linear-gradient(45deg, #28a745, #218838);
+			border-radius: 5px;
+			box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+		}
+
+		/* Food Styling */
+		.feed {
+			font-size: 18px;
+		}
+
+		/* Large Food Styling */
+		.largefeed {
+			font-size: 20px;
+		}
+
+		/* Score Card */
+		#scoreCard {
+			font-size: 22px;
+			font-weight: bold;
+			text-align: center;
+			padding: 15px;
+			border: 2px solid #343a40;
+			background-color: #f1f3f5;
+			border-radius: 10px;
+			width: fit-content;
+			margin: 20px auto;
+			box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+		}
+
+		/* Custom Alert Box */
+		#alertBox {
+			display: none;
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			background-color: white;
+			padding: 20px;
+			border: 2px solid #343a40;
+			border-radius: 10px;
+			z-index: 1000;
+			box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+			text-align: center;
+		}
+
+		/* Alert Box Buttons */
+		#alertBox button {
+			background-color: #28a745;
+			color: white;
+			border: none;
+			padding: 10px 15px;
+			margin: 5px;
+			cursor: pointer;
+			border-radius: 5px;
+			font-size: 16px;
+		}
+
+		#alertBox button:hover {
+			background-color: #218838;
+		}
+
+		/* Exit Button */
+		#exitBtn {
+			background-color: #dc3545;
+		}
+
+		#exitBtn:hover {
+			background-color: #c82333;
+		}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🐍 Snake Game</h2>
+        <div class="row">
+            <div class="col-md-8 game-box">
+				<!-- Creating a 25x25 table for the snake game grid -->
+                <table id="gameBox" border="1">
+                    <script>
+                        for (let i = 0; i < 25; i++) {
+                            document.write("<tr>");
+                            for (let j = 0; j < 25; j++) {
+                                document.write("<td></td>");
+                            }
+                            document.write("</tr>");
+                        }
+                    </script>
+                </table>
+            </div>
+            <div class="col-md-4">
+			<!-- Displaying Score, High Score, and Level -->
+                <div id="scoreCard" class="p-3">
+                    <p>Score: <span id="currentScore">0</span></p>
+                    <p>High Score: <span id="highScore">0</span></p>
+                    <p>Level: <span id="speedLevel">1</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Box -->
+    <div id="alertBox">
+        <p>Game Over! Your Score: <span id="finalScore"></span></p>
+        <button id="restartBtn">Restart Game</button>
+        <button id="exitBtn">Exit</button>
+    </div>
+
+    <script>
+			$(document).ready(function () {
+				/* Game Initialization */
+				const rows = 25;
+				const cols = 25;
+				const cells = $('#gameBox td'); // Select all table cells for rendering the game
+				let snake = [{ x: 1, y: 1 }];
+				let feed = { x: 3, y: 2 };
+				let largeFeed = null;
+				let direction = "RIGHT";
+				let gameInterval;
+				let speed = 300;
+				let score = 0;
+				let highScore = localStorage.getItem("highScore") || 0;
+				let feedCount = 0;
+				let level = 1;
+
+				$("#highScore").text(highScore);
+
+				// Function to initialize the game
+				function initGame() {
+					clearBoard();
+					drawSnake();
+					placeFeed();
+					updateScore();
+					$(document).off("keydown").on("keydown", changeDirection);
+					gameInterval = setInterval(moveSnake, speed);
+				}
+
+				// Function to clear the game board
+				function clearBoard() {
+					cells.removeClass("snake").removeClass("feed").removeClass("largefeed").html("");
+				}
+
+				// Function to render the snake on the board
+				function drawSnake() {
+					snake.forEach(w => {
+						const index = w.y * cols + w.x; // Corrected indexing
+						$(cells[index]).addClass("snake").html("🟩");
+					});
+				}
+
+				// Function to place food on the board
+				function placeFeed() {
+					const index = feed.y * cols + feed.x;
+					$(cells[index]).addClass("feed").html("🍎");
+
+					if (largeFeed) {
+						const largeIndex = largeFeed.y * cols + largeFeed.x;
+						$(cells[largeIndex]).addClass("largefeed").html("🍏");
+					}
+				}
+
+				// Function to move the snake
+				function moveSnake() {
+					let head = { x: snake[0].x, y: snake[0].y };
+
+					if (direction === "UP") head.y--;
+					if (direction === "DOWN") head.y++;
+					if (direction === "LEFT") head.x--;
+					if (direction === "RIGHT") head.x++;
+
+					let gameOver = false;
+
+					if (head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows) {
+						gameOver = true;
+					}
+
+					if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+						gameOver = true;
+					}
+
+					if (gameOver) {
+						clearInterval(gameInterval);
+						if (score > highScore) {
+							highScore = score;
+							localStorage.setItem("highScore", highScore);
+							$("#highScore").text(highScore);
+						}
+						showAlert();
+						return;
+					}
+
+					let newSnake = [head];
+
+					if (head.x === feed.x && head.y === feed.y) {
+						score += 10;
+						feedCount++;
+						updateScore();
+						generateNewFeed();
+						newSnake = newSnake.concat(snake);
+					} else if (largeFeed && head.x === largeFeed.x && head.y === largeFeed.y) {
+						score += 50;
+						largeFeed = null;
+						feedCount = 0;
+						updateScore();
+						newSnake = newSnake.concat(snake);
+					} else {
+						for (let i = 0; i < snake.length - 1; i++) {
+							newSnake.push(snake[i]);
+						}
+					}
+					snake = newSnake;
+
+					if (score >= level * 100) {
+						speed = Math.max(100, speed - 25);
+						level++;
+						$("#speedLevel").text(level);
+						clearInterval(gameInterval);
+						gameInterval = setInterval(moveSnake, speed);
+					}
+
+					clearBoard();
+					drawSnake();
+					placeFeed();
+				}
+
+				// Function to change direction
+				function changeDirection(event) {
+					if (event.key === "ArrowUp" && direction !== "DOWN") {
+						direction = "UP";
+					} else if (event.key === "ArrowDown" && direction !== "UP") {
+						direction = "DOWN";
+					} else if (event.key === "ArrowLeft" && direction !== "RIGHT") {
+						direction = "LEFT";
+					} else if (event.key === "ArrowRight" && direction !== "LEFT") {
+						direction = "RIGHT";
+					}
+				}
+
+				// Function to generate a new feed position
+				function generateNewFeed() {
+					let newFeedPosition;
+					do {
+						newFeedPosition = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+					} while (snake.some(w => w.x === newFeedPosition.x && w.y === newFeedPosition.y));
+
+					feed = newFeedPosition;
+
+					if (feedCount === 5) {
+						largeFeed = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+						feedCount = 0;
+					}
+				}
+
+				// Function to update the score display
+				function updateScore() {
+					$("#currentScore").text(score);
+				}
+
+				function showAlert() {
+					$('#finalScore').text(score);
+					$('#alertBox').fadeIn();
+				}
+
+				function resetGame() {
+					clearInterval(gameInterval);
+					clearBoard();
+					score = 0;
+					speed = 300;
+					level = 1;
+					snake = [{ x: 1, y: 1 }];
+					feed = { x: 3, y: 2 };
+					largeFeed = null;
+					direction = "RIGHT";
+					feedCount = 0;
+
+					$("#speedLevel").text(level);
+					$("#currentScore").text(score);
+					$("#alertBox").fadeOut();
+
+					$(document).off("keydown").on("keydown", changeDirection); // Fix event binding issue
+					initGame();
+				}
+
+				// Restart the game when the Restart Game button is clicked
+				$('#restartBtn').click(function () {
+					resetGame();
+				});
+
+				// Exit the game when the Exit button is clicked
+				$('#exitBtn').click(function () {
+					alert("Thank you for playing!");
+					$('#alertBox').fadeOut();
+				});
+
+				initGame();
+			});
+	</script>
+
+</body>
+</html>
