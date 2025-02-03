@@ -1,4 +1,4 @@
-# Snake Game Using HTML CSS JAVASCRIPT
+# Snake Game in Html,CSS and Javascript
 
 ## Description
 This is a simple and fun Snake game built using HTML, CSS, jQuery, and JavaScript. The objective of the game is to control a snake using arrow keys, eat food to grow longer, and avoid colliding with walls or the snake's own body.
