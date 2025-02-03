@@ -31,4 +31,4 @@ You can clone this repository or download it as a ZIP file.
 
 #### To clone:
 ```bash
-git clone https://github.com/Techsol789/SnakeGame
+git clone https://github.com/Techsol789/Snake-game
